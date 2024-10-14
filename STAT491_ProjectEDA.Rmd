@@ -23,8 +23,7 @@ $~$
 
 #### Exploratory Data Analysis
 
-
-```{r, out.width="450px", fig.align='center'}
+```{r}
 # Data Wrangling
 pokemon.dat <- read_csv("data/Pokemon_2.0.csv")
 
@@ -36,6 +35,20 @@ summary(pokemon.dat)
 levels(pokemon.dat$Type) # there are 18 pokemon types
 
 
+nrow(pokemon.dat)
+summary(pokemon.dat$Type)
+
+summary(pokemon.dat$Type2)
+
+summary(pokemon.dat$Generation)
+
+summary(pokemon.dat$Evolution)
+aggregate(pokemon.dat$Total~pokemon.dat$Evolution, FUN=mean)
+
+summary(pokemon.dat$Legendary)
+```
+
+```{r, out.width="450px", fig.align='center'}
 # Data Visualization
 ggplot(data = pokemon.dat, aes(x = Type, y = Total, fill = Type)) +
   geom_violin() +
@@ -53,20 +66,6 @@ ggplot(data = pokemon.dat, aes(x = Type, y = Total, fill = Type)) +
 # "sienna1", "red", "lightskyblue", "seashell1", "lightgreen", "peachpuff3",
 # "powderblue", "orange1", "darkmagenta", "plum2",  "lightsalmon4", "lightgrey",
 # "mediumturquoise")
-```
-
-```{r}
-nrow(pokemon.dat)
-count(pokemon.dat$Type)
-
-count(pokemon.dat$Type2)
-
-count(pokemon.dat$Generation)
-
-count(pokemon.dat$Evolution)
-aggregate(pokemon.dat$Total~pokemon.dat$Evolution, FUN=mean)
-
-count(pokemon.dat$Legendary)
 ```
 
 
