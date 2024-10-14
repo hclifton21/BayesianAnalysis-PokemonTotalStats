@@ -1,0 +1,221 @@
+---
+title: "STAT 491 - Project Data Analysis"
+author: "Jordyn Lucier & Harley Clifton"
+date: "2023-03-26"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+#### A. (4 points)
+
+Write a concise statement detailing your research question. This should be no more than two or three sentences.
+
+**Which pokemon type has the highest overall stats? **
+
+#### B. (4 points)
+
+Create a data visualization that helps inform your research question.
+
+```{r}
+library(readr)
+hecalledbulbasaur<- read_csv("data/Pokemon 2.0.csv")
+hecalledbulbasaur$Type= as.character(hecalledbulbasaur$Type)
+hecalledbulbasaur$Type2= as.character(hecalledbulbasaur$Type2)
+library(ggplot2)
+thatsonionturtle <- ggplot(hecalledbulbasaur, aes(Type, Total))
+thatsonionturtle + geom_boxplot() + 
+  theme(axis.text.x = element_text(angle=65, vjust=0.6)) + 
+  labs(title="Pokemon Total Stats by Type",
+       x="Pokemon Type",
+       y="Estimated Total Stats")
+hecalledbulbasaur$leg = ifelse(hecalledbulbasaur$Legendary == "TRUE", 1, 0)
+hecalledbulbasaur$bug = ifelse(hecalledbulbasaur$Type == "Bug", 1, 0)
+hecalledbulbasaur$dark = ifelse(hecalledbulbasaur$Type == "Dark", 1, 0)
+hecalledbulbasaur$dragon = ifelse(hecalledbulbasaur$Type == "Dragon", 1, 0)
+hecalledbulbasaur$electric = ifelse(hecalledbulbasaur$Type == "Electric", 1, 0)
+hecalledbulbasaur$fairy = ifelse(hecalledbulbasaur$Type == "Fairy", 1, 0)
+hecalledbulbasaur$fighting = ifelse(hecalledbulbasaur$Type == "Fighting", 1, 0)
+hecalledbulbasaur$fire = ifelse(hecalledbulbasaur$Type == "Fire", 1, 0)
+hecalledbulbasaur$flying = ifelse(hecalledbulbasaur$Type == "Flying", 1, 0)
+hecalledbulbasaur$ghost = ifelse(hecalledbulbasaur$Type == "Ghost", 1, 0)
+hecalledbulbasaur$grass = ifelse(hecalledbulbasaur$Type == "Grass", 1, 0)
+hecalledbulbasaur$ground = ifelse(hecalledbulbasaur$Type == "Ground", 1, 0)
+hecalledbulbasaur$ice = ifelse(hecalledbulbasaur$Type == "Ice", 1, 0)
+hecalledbulbasaur$normal = ifelse(hecalledbulbasaur$Type == "Normal", 1, 0)
+hecalledbulbasaur$poison = ifelse(hecalledbulbasaur$Type == "Poison", 1, 0)
+hecalledbulbasaur$psychic = ifelse(hecalledbulbasaur$Type == "Psychic", 1, 0)
+hecalledbulbasaur$rock = ifelse(hecalledbulbasaur$Type == "Rock", 1, 0)
+hecalledbulbasaur$steel = ifelse(hecalledbulbasaur$Type == "Steel", 1, 0)
+hecalledbulbasaur$water = ifelse(hecalledbulbasaur$Type == "Water", 1, 0)
+hecalledbulbasaur$Evolution = hecalledbulbasaur$Evolution - 1
+```
+
+
+#### C. (4 points)
+
+Write out a statistical model to explore your research question.\
+
+$Y_{TotalStats|PokemonType}$ ~ $\mu_{PokemonType}$ + $\epsilon$, where $\epsilon$ ~ N(0,$\sigma^2$)
+
+#### D. (4 points)
+
+Identify the parameters from the model in 2B and justify prior distributions.
+
+$\mu_{bug}$ ~ norm(400, 100), as I know the mean overall stats will be between 400 and 600 and believe bug types are kinda bad but I am not super sure about that. 
+
+$\mu_{dark}$ ~ norm(475, 100), as I believe dark types are kinda good but I am not super sure about that. 
+
+$\mu_{dragon}$ ~ norm(575, 50), as I believe dragon types are kinda the best and I am pretty sure about that. 
+
+$\mu_{electric}$ ~ norm(450, 75), as I believe electric types are pretty average but I am not so sure about that. 
+
+$\mu_{fairy}$ ~ norm(400, 100), as I believe fairy types kinda suck but I am not sure about that. 
+
+$\mu_{fighting}$ ~ norm(475, 75), as I believe fighting types are average but I am not so sure about that. 
+
+$\mu_{fire}$ ~ norm(475, 75), as I believe fire types are average but I am not so sure about that. 
+
+$\mu_{flying}$ ~ norm(500, 50), as I believe flying types are kinda the second best and I am pretty sure about that. 
+
+$\mu_{ghost}$ ~ norm(450, 75), as I believe ghost types are pretty average but I am not so sure about that. 
+
+$\mu_{grass}$ ~ norm(425, 75), as I believe grass types are below average but am not sure.
+
+$\mu_{ground}$ ~ norm(425, 75), as I believe grass types are below average but am not sure.
+
+$\mu_{ice}$ ~ norm(450, 75), as I believe ice types are pretty average but I am not so sure about that. 
+
+$\mu_{normal}$ ~ norm(400, 25), normal types are pretty much overall the worst, and I am sure about that. 
+
+$\mu_{poison}$ ~ norm(425, 75), as I believe poison types are below average but am not sure.
+
+$\mu_{psychic}$ ~ norm(475, 75), as I believe psychic types are average but am not sure.
+
+$\mu_{rock}$ ~ norm(425, 75), as I believe rock types are below average but am not sure.
+
+$\mu_{steel}$ ~ norm(450, 75), as I believe electric types are pretty average but I am not so sure about that. 
+
+$\mu_{water}$ ~ norm(450, 75), as I believe electric types are pretty average but I am not so sure about that. 
+
+$\sigma^2$ ~ Unif(0, 1000^2), looking at the plot the variance is around 200 and it cannot be negative and we want the upper bound to be way greater than 200^2. 
+
+#### E. (4 points)
+
+Write JAGS code to fit this model
+
+```{r}
+geodude <- model.matrix(Total~Type - 1, data = hecalledbulbasaur)
+```
+
+
+```{r}
+library(rjags)
+library(dplyr)
+library(tibble)
+punchyrock<- "model{
+  # Likelihood
+  for (i in 1:n){
+    y[i] ~ dnorm(meowth * x1[i] + catwiththelongassarms * x2[i] + ekanspurpleshit * x3[i] + hecalleddiglett * x4[i] + thatsfloorshitrightthere * x5[i] + anddugtrio * x6[i] + thatsthreefloorshits * x7[i] + heknewpikachu * x8[i] + buteveryoneknowspikachu * x9[i] + ohyeahthatspikachurightthere * x10[i] + hecalledweepingbell * x11[i] + ohthatsalmostapear * x12[i] + weedle * x13[i] + partyweiner * x14[i] + beedrill * x15[i] + everybodyknowsthatsbigdickbee * x16[i] + beesdontevenhavedicks * x17[i] + itsastinger * x18[i] + whosthatpokemon *x19[i] + pikachu * x20[i] , 1/sigma2) 
+  }
+  # Prior
+  meowth ~ dnorm(400, 100)
+  catwiththelongassarms ~ dnorm(475, 1/100^2)
+  ekanspurpleshit ~ dnorm(575, 1/50^2)
+  hecalleddiglett ~ dnorm(450, 1/75^2)
+  thatsfloorshitrightthere ~ dnorm(400, 1/100^2)
+  anddugtrio ~ dnorm(475, 1/75^2)
+  thatsthreefloorshits ~ dnorm(475, 1/75^2)
+  heknewpikachu ~ dnorm(500, 1/50^2)
+  buteveryoneknowspikachu ~ dnorm(450, 1/75^2)
+  ohyeahthatspikachurightthere ~ dnorm(425, 1/75^2)
+  hecalledweepingbell ~ dnorm(425, 1/75^2)
+  ohthatsalmostapear ~ dnorm(450, 1/75^2)
+  weedle ~ dnorm(400, 1/25^2)
+  partyweiner ~ dnorm(425, 1/75^2)
+  beedrill ~ dnorm(475, 1/75^2)
+  everybodyknowsthatsbigdickbee ~ dnorm(425, 1/75^2)
+  beesdontevenhavedicks ~ dnorm(450, 1/75^2)
+  itsastinger ~ dnorm(450, 1/75^2)
+  whosthatpokemon ~ dnorm(100, 1/100^2)
+  pikachu ~ dnorm(50, 1/100^2)
+  sigma2 ~ dunif(0, 1000000)
+}"
+
+gotta = jags.model(file = textConnection(punchyrock), data = list(y = hecalledbulbasaur$Total, x1=hecalledbulbasaur$bug, x2=hecalledbulbasaur$dark, x3=hecalledbulbasaur$dragon, x4=hecalledbulbasaur$electric, x5=hecalledbulbasaur$fairy, x6=hecalledbulbasaur$fighting, x7=hecalledbulbasaur$fire, x8=hecalledbulbasaur$flying, x9=hecalledbulbasaur$ghost, x10=hecalledbulbasaur$grass, x11=hecalledbulbasaur$ground, x12=hecalledbulbasaur$ice, x13=hecalledbulbasaur$normal, x14=hecalledbulbasaur$poison, x15=hecalledbulbasaur$psychic, x16=hecalledbulbasaur$rock, x17=hecalledbulbasaur$steel, x18=hecalledbulbasaur$water, x19 = hecalledbulbasaur$leg, x20 = hecalledbulbasaur$Evolution , n = nrow(hecalledbulbasaur)))
+
+update(gotta, n.iter = 5000)
+catchemall = coda.samples(gotta, variable.names = c('meowth', 'catwiththelongassarms', 'ekanspurpleshit', 'hecalleddiglett', 'thatsfloorshitrightthere', 'anddugtrio', 'thatsthreefloorshits', 'heknewpikachu', 'buteveryoneknowspikachu', 'ohyeahthatspikachurightthere', 'hecalledweepingbell', 'ohthatsalmostapear', 'weedle', 'partyweiner', 'beedrill', 'everybodyknowsthatsbigdickbee', 'beesdontevenhavedicks', 'itsastinger','whosthatpokemon', 'pikachu', 'sigma2'), n.iter = 10000)
+```
+
+
+#### F. (4 points)
+
+Summarize your parameters in the model.
+
+```{r}
+summary(catchemall)
+```
+
+:)
+
+we would like to control for generation, legendary, and evolution but are unsure of how to code that. 
+
+```{r}
+library(rjags)
+dataList = list(y = hecalledbulbasaur$Total, x1 = hecalledbulbasaur$grass, x2 = hecalledbulbasaur$electric, x3 = hecalledbulbasaur$rock, x4 = hecalledbulbasaur$flying, x5 = hecalledbulbasaur$fire, x6 = hecalledbulbasaur$Legendary, x7 = hecalledbulbasaur$Evolution, n = nrow(hecalledbulbasaur))
+
+pokepoke<- "model{
+  # Likelihood
+  for (i in 1:n){
+    y[i] ~ dnorm(grass * x1[i] + electric * x2[i] + rock * x3[i] + flying * x4[i] + fire * x5[i] + legendary * x6[i] + evol * x7[i], 1/sigma2) 
+    pp[i] ~ dnorm(grass * x1[i] + electric * x2[i] + rock * x3[i] + flying * x4[i] + fire * x5[i] + legendary * x6[i] + evol * x7[i], 1/sigma2) 
+  }
+  # Prior
+  shroomish ~ dnorm(grass * 1 + electric * 0 + rock * 0 + flying * 0 + fire * 0 + legendary * 0 + evol * 2, 1/sigma2)
+  fanrotom ~ dnorm(grass * 0 + electric * 1 + rock * 0 + flying * 0 + fire * 0 + legendary * 0 + evol * 2, 1/sigma2)
+  golem ~ dnorm(grass * 0 + electric * 0 + rock * 1 + flying * 0 + fire * 0 + legendary * 0 + evol * 3, 1/sigma2)
+  tornadus ~ dnorm(grass * 0 + electric * 0 + rock * 0 + flying * 1 + fire * 0 + legendary * 1 + evol * 1, 1/sigma2)
+  megacharizard ~ dnorm(grass * 0 + electric * 0 + rock * 0 + flying * 0 + fire * 1 + legendary * 0 + evol * 4, 1/sigma2)
+  grass ~ dnorm(425, 1/75^2)
+  electric ~ dnorm(450, 1/75^2)
+  rock ~ dnorm(425, 1/75^2)
+  flying ~ dnorm(500, 1/50^2)
+  fire ~ dnorm(475, 1/75^2)
+  legendary ~ dnorm(100, 1/100^2)
+  evol ~ dnorm(50, 1/100^2)
+  sigma2 ~ dunif(0, 1000000)
+}"
+
+writeLines(pokepoke, con='NORMmodel.txt')
+# Runs JAGS Model
+jags.norm <- jags.model( file = "NORMmodel.txt", data = dataList, n.chains = 2, n.adapt = 1000)
+update(jags.norm, n.iter = 1000)
+coda.norm <- coda.samples( jags.norm, variable.names = c('grass','electric', 'rock', 'flying', 'fire', 'legendary', 'evol', 'sigma2','shroomish','fanrotom','golem', 'tornadus','megacharizard', 'pp'), n.iter = 5000)
+pp_out <- tibble(vals = c(coda.norm[[1]][,'shroomish'],
+                          coda.norm[[1]][,'fanrotom'],
+                          coda.norm[[1]][,'golem'],
+                          coda.norm[[1]][,'tornadus'], 
+                          coda.norm[[1]][,'megacharizard']),
+                 type = rep(c('shroomish stats', 'fanrotom stats', 'golem stats', 'tornadus stats', 'megacharizard stats'),each = 5000))
+
+```
+
+```{r, fig.height = 9, fig.align = 'center'}
+pp_out %>% group_by(type) %>% 
+  summarize(`better` = mean(vals > 500)) %>%
+  kable(digits = 3)
+pp_out %>% ggplot(aes(x = vals)) +
+  geom_histogram() + 
+  facet_grid(type~.) +
+  labs(title = "Predicted Posterior Distributions for \n  Five Pokemon with Diverse Characteristics",
+       x = "Estimated Total Stats", 
+       y = "Count") +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+

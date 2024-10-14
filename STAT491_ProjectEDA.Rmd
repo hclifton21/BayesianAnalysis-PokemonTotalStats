@@ -1,0 +1,375 @@
+---
+title: "STAT 491 - Pokémon Project Code"
+author: "Harley Clifton & Jordyn Lucier"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+library(tidyverse)
+library(ggplot2)
+library(rjags)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Using the dataset for your project, complete the following tasks. Note this mirrors the second question on the takehome exam.
+
+#### Research Question
+
+**How does Pokemon type impact overall stats? In other words, which Pokemon types tend to have the highest stats on average?**
+
+
+$~$
+
+#### Exploratory Data Analysis
+
+
+```{r, out.width="450px", fig.align='center'}
+# Data Wrangling
+pokemon.dat <- read_csv("data/Pokemon_2.0.csv")
+
+names <- c("Type", "Type2", "Generation", "Evolution")
+pokemon.dat[,names] <- lapply(pokemon.dat[ , names], factor)
+
+summary(pokemon.dat)
+
+levels(pokemon.dat$Type) # there are 18 pokemon types
+
+
+# Data Visualization
+ggplot(data = pokemon.dat, aes(x = Type, y = Total, fill = Type)) +
+  geom_violin() +
+  geom_jitter(width = 0.1, alpha = 0.3) +
+  labs(title = "Pokemon Total Stats by Type",
+       x = "Pokemon Type",
+       y = "Estimated Total Stats") +
+  ylim(0, 800) + 
+  theme_bw() +  
+  theme(plot.title = element_text(hjust = 0.5), 
+        axis.text.x = element_text(angle = 90, vjust = 0.5),
+        legend.position = "none")
+
+# c("maroon1", "darkslateblue", "mediumvioletred", "paleturquoise", "thistle1",
+# "sienna1", "red", "lightskyblue", "seashell1", "lightgreen", "peachpuff3",
+# "powderblue", "orange1", "darkmagenta", "plum2",  "lightsalmon4", "lightgrey",
+# "mediumturquoise")
+```
+
+```{r}
+nrow(pokemon.dat)
+count(pokemon.dat$Type)
+
+count(pokemon.dat$Type2)
+
+count(pokemon.dat$Generation)
+
+count(pokemon.dat$Evolution)
+aggregate(pokemon.dat$Total~pokemon.dat$Evolution, FUN=mean)
+
+count(pokemon.dat$Legendary)
+```
+
+
+```{r}
+gen.colors <- c("rosybrown1", "pink1", "palevioletred1", 
+                "maroon1",  "maroon2", "mediumvioletred")
+
+ggplot(data = pokemon.dat, aes(x = Generation, y = Total)) +
+  geom_violin(aes(fill = Generation)) +
+  geom_jitter(width = 0.1, alpha = 0.5) +
+  scale_fill_manual(values = gen.colors) +
+  labs(title = "Pokemon Total Stats by Generation",
+       x = "Generation",
+       y = "Estimated Total Stats") +
+  ylim(0, 800) + 
+  theme_bw() +  
+  theme(plot.title = element_text(hjust = 0.5), 
+        axis.text.x = element_text(vjust = 0.5),
+        legend.position = "none") 
+```
+
+
+
+```{r}
+evol.colors <- c("burlywood1", "goldenrod1", "orange1", "darkorange2")
+
+ggplot(data = pokemon.dat, aes(x = Evolution, y = Total)) +
+  geom_violin(aes(fill = Evolution)) +
+  geom_jitter(width = 0.1, alpha = 0.1) +
+  scale_fill_manual(values = evol.colors) +
+  labs(title = "Pokemon Total Stats by Evolution",
+       x = "Evolution",
+       y = "Estimated Total Stats") +
+  ylim(0, 800) + 
+  theme_bw() +  
+  theme(plot.title = element_text(hjust = 0.5), 
+        axis.text.x = element_text(vjust = 0.5),
+        legend.position = "none")
+
+
+ggplot(data = pokemon.dat, aes(x = Evolution, y = Total)) +
+  geom_point(alpha = 0.1) +
+  geom_smooth(method = lm, color = "goldenrod1") +
+  geom_smooth(method = loess, color = "darkorange2") +
+  labs(title = "Pokemon Total Stats by Evolution",
+       x = "Evolution",
+       y = "Estimated Total Stats") +
+  ylim(0, 800) + 
+  theme_bw() +  
+  theme(plot.title = element_text(hjust = 0.5), 
+        axis.text.x = element_text(vjust = 0.5),
+        legend.position = "none")
+
+aggregate(pokemon.dat$Total~pokemon.dat$Evolution, FUN=mean)
+```
+
+```{r}
+pokemon.dat <- pokemon.dat %>% mutate(Legendary.Status = ifelse(Legendary == T, 1 ,0))
+pokemon.dat$Legendary.Status <- as.factor(pokemon.dat$Legendary.Status)
+
+leg.colors <- c("darkslategray2", "mediumturquoise")
+
+ggplot(data = pokemon.dat, aes(x = Legendary.Status, y = Total)) +
+  geom_violin(aes(fill = Legendary.Status)) +
+  geom_jitter(width = 0.1, alpha = 0.2) +
+  scale_fill_manual(values = leg.colors) +
+  labs(title = "Pokemon Total Stats by Legendary Status",
+       x = "Legendary Status",
+       y = "Estimated Total Stats") +
+  ylim(0, 800) + 
+  theme_bw() +  
+  theme(plot.title = element_text(hjust = 0.5), 
+        axis.text.x = element_text(vjust = 0.5),
+        legend.position = "none")
+```
+
+
+```{r}
+tally(x = pokemon.dat)
+# table(pokemon.dat$Type2)
+```
+
+
+
+$~$
+
+#### Write out a statistical model to explore your research question.
+
+$Total \ Stats_i \sim \ \displaystyle\sum_{j = 1}^{18}{\beta_j * Pokemon \ Type_i} + {\beta_{19} * Evolution_i} + \beta_{20} I_{Legendary, i} + \varepsilon_i$  
+
+where $\varepsilon \sim N(0, \sigma^2)$, and $I_{Legendary}$ is an indicator variable for legendary status that is 1 when the pokemon is legendary and 0 otherwise.
+
+$~$
+
+#### Identify the parameters from the model & justify prior distributions.
+
+$\beta_{bug}$ ~ N(400, 100), as we know the mean overall stats will be between 400 and 600 and believe bug types are kinda bad but we are not super sure about that. 
+
+$\beta_{dark}$ ~ N(475, 100), as we believe dark types are kinda good but we are not super sure about that. 
+
+$\beta_{dragon}$ ~ N(575, 50), as we believe dragon types are kinda the best and we are pretty sure about that. 
+
+$\beta_{electric}$ ~ N(450, 75), as we believe electric types are pretty average but we are not so sure about that. 
+
+$\beta_{fairy}$ ~ N(400, 100), as we believe fairy types kinda suck but we are not sure about that. 
+
+$\beta_{fighting}$ ~ N(475, 75), as we believe fighting types are average but we are not so sure about that. 
+
+$\beta_{fire}$ ~ N(475, 75), as we believe fire types are average but we are not so sure about that. 
+
+$\beta_{flying}$ ~ N(500, 50), as we believe flying types are kinda the second best and we are pretty sure about that. 
+
+$\beta_{ghost}$ ~ N(450, 75), as we believe ghost types are pretty average but we are not so sure about that. 
+
+$\beta_{grass}$ ~ N(425, 75), as we believe grass types are below average but am not sure.
+
+$\beta_{ground}$ ~ N(425, 75), as we believe grass types are below average but am not sure.
+
+$\beta_{ice}$ ~ N(450, 75), as we believe ice types are pretty average but we are not so sure about that. 
+
+$\beta_{normal}$ ~ N(400, 25), normal types are pretty much overall the worst, and we are sure about that. 
+
+$\beta_{poison}$ ~ N(425, 75), as we believe poison types are below average but am not sure.
+
+$\beta_{psychic}$ ~ N(475, 75), as we believe psychic types are average but am not sure.
+
+$\beta_{rock}$ ~ N(425, 75), as we believe rock types are below average but am not sure.
+
+$\beta_{steel}$ ~ N(450, 75), as we believe electric types are pretty average but we are not so sure about that. 
+
+$\beta_{water}$ ~ N(450, 75), as we believe electric types are pretty average but we are not so sure about that. 
+
+
+$\beta_{Evolution = 1}$
+
+$\beta_{Evolution = 2}$
+
+$\beta_{Evolution = 3}$
+
+$\beta_{Evolution = 4}$
+
+
+
+$\beta_{Legendary}$
+
+
+
+$\sigma^2$ ~ Uniform(0, 1000^2), looking at the plot the variance is around 200 and it cannot be negative and we want the upper bound to be way greater than 200^2. 
+
+
+
+$~$
+
+#### Write JAGS code to fit this model
+
+```{r}
+geodude <- model.matrix(Total ~ Type + Evolution + Legendary.Status - 1, 
+                        data = pokemon.dat)
+```
+
+```{r}
+model_normal <- "model{
+  # Likelihood
+  for (i in 1:n){
+    y[i] ~ dnorm(beta_bug * x1[i] + beta_dark * x2[i] + beta_dragon * x3[i] +
+                 beta_electric * x4[i] + beta_fairy * x5[i] + beta_fighting * x6[i] +
+                 beta_fire * x7[i] + beta_flying * x8[i] + beta_ghost * x9[i] +
+                 beta_grass * x10[i] + beta_ground * x11[i] + beta_ice * x12[i] +
+                 beta_normal * x13[i] + beta_poison * x14[i] + beta_psychic * x15[i] +
+                 beta_rock * x16[i] + beta_steel * x17[i] + beta_water * x18[i] +
+                 beta_gen1 * x19[i] + beta_gen2 * x20[i] + beta_gen3 * x21[i] +
+                 beta_gen4 * x22[i] + beta_legend * x23[i],
+                 1/(sigma^2)) 
+  }
+  
+  # Priors
+  beta_bug ~ dnorm(400, 1/100^2)
+  beta_dark ~ dnorm(475, 1/100^2)
+  beta_dragon ~ dnorm(575, 1/50^2)
+  beta_electric ~ dnorm(450, 1/75^2)
+  beta_fairy ~ dnorm(400, 1/100^2)
+  beta_fighting ~ dnorm(475, 1/75^2)
+  beta_fire ~ dnorm(475, 1/75^2)
+  beta_flying ~ dnorm(500, 1/50^2)
+  beta_ghost ~ dnorm(450, 1/75^2)
+  beta_grass ~ dnorm(425, 1/75^2)
+  beta_ground ~ dnorm(425, 1/75^2)
+  beta_ice ~ dnorm(450, 1/75^2)
+  beta_normal ~ dnorm(400, 1/25^2)
+  beta_poison ~ dnorm(425, 1/75^2)
+  beta_psychic ~ dnorm(475, 1/75^2)
+  beta_rock ~ dnorm(425, 1/75^2)
+  beta_steel ~ dnorm(450, 1/75^2)
+  beta_water ~ dnorm(450, 1/75^2)
+  
+  beta_gen1 
+  beta_gen2 
+  beta_gen3
+  beta_gen4 
+  
+  beta_legend
+  
+  sigma ~ dunif(0, 1000000)
+}"
+
+model <- jags.model(file = textConnection(model_normal), 
+                   data = list(x1=geodude[,1], x2=geodude[,2], x3=geodude[,3],
+                               x4=geodude[,4], x5=geodude[,5], x6=geodude[,6],
+                               x7=geodude[,7], x8=geodude[,8], x9=geodude[,9],
+                               x10=geodude[,10], x11=geodude[,11], x12=geodude[,12],
+                               x13=geodude[,13], x14=geodude[,14], x15=geodude[,15],
+                               x16=geodude[,16], x17=geodude[,17], x18=geodude[,18],
+                               x19=geodude[,19], x20=geodude[,20], x21=geodude[,21],
+                               x22=geodude[,22], x23=geodude[,23],
+                               n = nrow(geodude)))
+
+update(model, n.iter = 5000)
+
+catchemall <- coda.samples(model, variable.names = c('beta_bug', 'beta_dark', 'beta_dragon', 'beta_electric', 'beta_fairy', 'beta_fighting', 'beta_fire', 'beta_flying', 'beta_ghost', 'beta_grass', 'beta_ground', 'beta_ice', 'beta_normal', 'beta_poison', 'beta_psychic', 'beta_rock', 'beta_steel', 'beta_water', 'sigma'), n.iter = 10000)
+```
+
+
+$~$
+
+#### Summarize Parameters in the Model.
+
+```{r}
+summary(catchemall)
+```
+
+
+
+$~$
+
+#### Graph Results
+
+```{r}
+want <- pokemon.dat[pokemon.dat$Type %in% c("Flying", "Bug", "Dragon", "Dark", "Rock"),]
+
+want <- want %>%
+  mutate(Type = factor(Type, 
+                       levels = c("Flying", "Bug", "Dragon", "Dark", "Rock")))
+
+want.CI <- data.frame(Type = c("Flying", "Bug", "Dragon", "Dark", "Rock"),
+                      Mean.Est = c(412.18, 399.99, 398.78, 382.90, 382.85),
+                      Upper.CI = c(478.31, 400.18, 427.48, 411.38, 406.96),
+                      Lower.CI = c(346.81, 399.8, 370.78, 355.22, 359.37))
+
+want.colors <- c("#00BF74", "#F8766D", "#D39200", "#E88526",  "#F564E3")
+
+ggplot() +
+  geom_violin(data = want, aes(x = Type, y = Total, fill = Type)) +
+  geom_point(data = want.CI, aes(x = Type, y = Mean.Est)) +
+  geom_errorbar(aes(x = Type, ymin = Lower.CI, ymax = Upper.CI), 
+                data = want.CI, width = 0.3) +
+  scale_fill_manual(values = want.colors) +
+  labs(title = "Five Most Desirable Pokemon Types",
+       x = "Pokemon Type",
+       y = "Estimated Total Stats") +
+  ylim(0, 800) + 
+  theme_bw() +  
+  theme(plot.title = element_text(hjust = 0.5), 
+        axis.text.x = element_text(angle = 90, vjust = 0.5),
+        legend.position = "none")
+```
+
+
+```{r}
+dont <- pokemon.dat[pokemon.dat$Type %in% c("Fairy", "Ground", "Poison", "Normal", "Ice"),]
+
+dont <- dont %>%
+  mutate(Type = factor(Type, 
+                       levels = c("Fairy", "Ground", "Poison", "Normal", "Ice")))
+
+dont.CI <- data.frame(Type = c("Fairy", "Ground", "Poison", "Normal", "Ice"),
+                      Mean.Est = c(346.37, 359.23, 354.53, 356.81, 358.30),
+                      Upper.CI = c(383.45, 386.55, 383.37, 372.18, 389.14),
+                      Lower.CI = c(309.49, 331.70, 325.85, 341.36, 326.57))
+
+dont.colors <- c("#93AA00", "#00B9E3", "#AE87FF", "#619CFF", "#00ADFA")
+
+ggplot() +
+  geom_violin(data = dont, aes(x = Type, y = Total, fill = Type)) +
+  geom_point(data = dont.CI, aes(x = Type, y = Mean.Est)) +
+  geom_errorbar(aes(x = Type, ymin = Lower.CI, ymax = Upper.CI), 
+                data = dont.CI, width = 0.3) +
+  scale_fill_manual(values = dont.colors) +
+  labs(title = "Five Least Desirable Pokemon Types",
+       x = "Pokemon Type",
+       y = "Estimated Total Stats") +
+  ylim(0, 800) + 
+  theme_bw() +  
+  theme(plot.title = element_text(hjust = 0.5), 
+        axis.text.x = element_text(angle = 90, vjust = 0.5),
+        legend.position = "none")
+```
+
+$~$
+
+#### Citations
+
+```{r}
+citation("ggplot2")
+citation("rjags")
+```
+
