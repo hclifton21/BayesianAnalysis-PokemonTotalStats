@@ -23,7 +23,7 @@ Create a data visualization that helps inform your research question.
 
 ```{r}
 library(readr)
-hecalledbulbasaur<- read_csv("data/Pokemon 2.0.csv")
+hecalledbulbasaur <- read_csv("data/Pokemon 2.0.csv")
 hecalledbulbasaur$Type= as.character(hecalledbulbasaur$Type)
 hecalledbulbasaur$Type2= as.character(hecalledbulbasaur$Type2)
 library(ggplot2)
